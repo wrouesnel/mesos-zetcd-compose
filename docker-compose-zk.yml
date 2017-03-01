@@ -18,29 +18,10 @@ services:
     image: zookeeper:3.4.9
     environment:
       ZOO_MY_ID: 1
-      ZOO_SERVERS: server.1=172.20.0.2:2888:3888 server.2=172.20.0.3:2888:3888 server.3=172.20.0.4:2888:3888
+      ZOO_SERVERS: server.1=172.20.0.2:2888:3888
     networks:
       zetcd-test-net:
         ipv4_address: 172.20.0.2
-
-
-  zk1:
-    image: zookeeper:3.4.9
-    environment:
-      ZOO_MY_ID: 2
-      ZOO_SERVERS: server.1=172.20.0.2:2888:3888 server.2=172.20.0.3:2888:3888 server.3=172.20.0.4:2888:3888
-    networks:
-      zetcd-test-net:
-        ipv4_address: 172.20.0.3
-        
-  zk2:
-    image: zookeeper:3.4.9
-    environment:
-      ZOO_MY_ID: 3
-      ZOO_SERVERS: server.1=172.20.0.2:2888:3888 server.2=172.20.0.3:2888:3888 server.3=172.20.0.4:2888:3888
-    networks:
-      zetcd-test-net:
-        ipv4_address: 172.20.0.4
 
   zetcd0:
     build: zetcd
@@ -50,30 +31,6 @@ services:
         ipv4_address: 172.20.0.12
     depends_on:
     - zk0
-    - zk1
-    - zk2
-
-  zetcd1:
-    build: zetcd
-    command: -zkbridge=172.20.0.3:2181 -zkaddr=:2181 -logtostderr -v 10
-    networks:
-      zetcd-test-net:
-        ipv4_address: 172.20.0.13
-    depends_on:
-    - zk0
-    - zk1
-    - zk2
-        
-  zetcd2:
-    build: zetcd
-    command: -zkbridge=172.20.0.4:2181 -zkaddr=:2181 -logtostderr -v 10
-    networks:
-      zetcd-test-net:
-        ipv4_address: 172.20.0.14
-    depends_on:
-    - zk0
-    - zk1
-    - zk2
     
   mesos-master-1:
     image: mesosphere/mesos:1.2.0-rc2
@@ -83,7 +40,7 @@ services:
     environment:
       - MESOS_QUORUM=2
       - MESOS_PORT=5050
-      - MESOS_ZK=zk://172.20.0.12:2181,172.20.0.13:2181,172.20.0.14:2181/mesos
+      - MESOS_ZK=zk://172.20.0.12:2181/mesos
       - MESOS_HOSTNAME=172.20.0.22
     restart: unless-stopped
     ports:
@@ -93,8 +50,6 @@ services:
         ipv4_address: 172.20.0.22
     depends_on:
     - zetcd0
-    - zetcd1
-    - zetcd2
 
   mesos-master-2:
     image: mesosphere/mesos:1.2.0-rc2
@@ -104,7 +59,7 @@ services:
     environment:
       - MESOS_QUORUM=2
       - MESOS_PORT=5051
-      - MESOS_ZK=zk://172.20.0.12:2181,172.20.0.13:2181,172.20.0.14:2181/mesos
+      - MESOS_ZK=zk://172.20.0.12:2181/mesos
       - MESOS_HOSTNAME=172.20.0.23
     restart: unless-stopped
     ports:
@@ -114,8 +69,6 @@ services:
         ipv4_address: 172.20.0.23
     depends_on:
     - zetcd0
-    - zetcd1
-    - zetcd2
 
   mesos-master-3:
     image: mesosphere/mesos:1.2.0-rc2
@@ -125,7 +78,7 @@ services:
     environment:
       - MESOS_QUORUM=2
       - MESOS_PORT=5052
-      - MESOS_ZK=zk://172.20.0.12:2181,172.20.0.13:2181,172.20.0.14:2181/mesos
+      - MESOS_ZK=zk://172.20.0.12:2181/mesos
       - MESOS_HOSTNAME=172.20.0.24
     restart: unless-stopped
     ports:
@@ -135,8 +88,6 @@ services:
         ipv4_address: 172.20.0.24
     depends_on:
     - zetcd0
-    - zetcd1
-    - zetcd2
 
   mesos-slave-1:
     image: mesosphere/mesos:1.2.0-rc2
@@ -151,7 +102,7 @@ services:
     environment:
       - MESOS_CONTAINERIZERS=docker
       - MESOS_WORK_DIR=/data
-      - MESOS_MASTER=zk://172.20.0.12:2181,172.20.0.13:2181,172.20.0.14:2181/mesos
+      - MESOS_MASTER=zk://172.20.0.12:2181/mesos
       - MESOS_DOCKER_STOP_TIMEOUT=2mins
       - MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
       - MESOS_PORT=5060
@@ -164,13 +115,11 @@ services:
         ipv4_address: 172.20.0.30
     depends_on:
     - zetcd0
-    - zetcd1
-    - zetcd2
     
   marathon:
     image: mesosphere/marathon
-    command: --master zk://172.20.0.12:2181,172.20.0.13:2181,172.20.0.14:2181/mesos
-             --zk zk://172.20.0.12:2181,172.20.0.13:2181,172.20.0.14:2181/marathon
+    command: --master zk://172.20.0.12:2181/mesos
+             --zk zk://172.20.0.12:2181/marathon
     ports:
     - 8080:8080
     networks:
